@@ -1,0 +1,40 @@
+name: nexus_app
+description: Nexus - All-in-one Business Platform
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # State management
+  provider: ^6.1.1
+  # HTTP
+  dio: ^5.4.0
+  # Storage
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.2
+  # UI
+  google_fonts: ^6.1.0
+  fl_chart: ^0.66.2
+  cached_network_image: ^3.3.1
+  intl: ^0.19.0
+  # Utils
+  timeago: ^3.6.0
+  image_picker: ^1.0.7
+  file_picker: ^8.0.0
+  url_launcher: ^6.2.4
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
