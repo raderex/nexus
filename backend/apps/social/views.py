@@ -11,11 +11,13 @@ from .models import SocialAccount, SocialPost, SocialMessage, Campaign, MediaFil
 from .serializers import (SocialAccountSerializer, SocialPostSerializer, SocialMessageSerializer,
                            CampaignSerializer, MediaFileSerializer, PostAnalyticSerializer,
                            WebhookSerializer, HashtagSerializer, PostQueueSerializer)
+from apps.core.permissions import IsOrgEditorOrReadOnly, IsOrgAdmin, IsOrgMember
 
 
 class SocialAccountViewSet(viewsets.ModelViewSet):
+    """Social accounts - admins can connect/manage, others read-only."""
     serializer_class = SocialAccountSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['platform', 'is_active', 'is_connected']
 
@@ -53,8 +55,9 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
 
 
 class SocialPostViewSet(viewsets.ModelViewSet):
+    """Social posts - editors can create/schedule, viewers read-only."""
     serializer_class = SocialPostSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'ai_generated']
     search_fields = ['content']
@@ -180,8 +183,9 @@ Return JSON with: {{"content": "...", "hashtags": [...], "platform_variants": {{
 
 
 class SocialMessageViewSet(viewsets.ModelViewSet):
+    """Social messages - editors can manage, viewers read-only."""
     serializer_class = SocialMessageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['is_read', 'is_replied', 'message_type', 'social_account']
     search_fields = ['sender_name', 'content']
@@ -215,8 +219,9 @@ class SocialMessageViewSet(viewsets.ModelViewSet):
 
 
 class CampaignViewSet(viewsets.ModelViewSet):
+    """Campaigns - editors can manage, viewers read-only."""
     serializer_class = CampaignSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status', 'objective']
     search_fields = ['name']
@@ -253,8 +258,9 @@ class CampaignViewSet(viewsets.ModelViewSet):
 
 
 class MediaFileViewSet(viewsets.ModelViewSet):
+    """Media files - editors can upload, viewers read-only."""
     serializer_class = MediaFileSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['file_type']
@@ -276,8 +282,9 @@ class MediaFileViewSet(viewsets.ModelViewSet):
 
 
 class HashtagViewSet(viewsets.ModelViewSet):
+    """Hashtags - editors can manage, viewers read-only."""
     serializer_class = HashtagSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['platform', 'is_trending']
     search_fields = ['tag', 'category']
@@ -305,8 +312,9 @@ class HashtagViewSet(viewsets.ModelViewSet):
 
 
 class PostAnalyticViewSet(viewsets.ModelViewSet):
+    """Post analytics - read for members, admin manages."""
     serializer_class = PostAnalyticSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgMember]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['post', 'social_account']
 
@@ -317,8 +325,9 @@ class PostAnalyticViewSet(viewsets.ModelViewSet):
 
 
 class PostQueueViewSet(viewsets.ModelViewSet):
+    """Post queue - editors can manage, viewers read-only."""
     serializer_class = PostQueueSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'social_account']
 

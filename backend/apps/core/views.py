@@ -9,16 +9,29 @@ from django.utils import timezone
 
 from .models import Organization, User, OrganizationMember
 from .serializers import OrganizationSerializer, UserSerializer, UserCreateSerializer, OrganizationMemberSerializer
+from .permissions import IsOrgAdmin, IsOrgMember, IsOrgEditorOrReadOnly
 
 
 class OrganizationViewSet(viewsets.ModelViewSet):
     serializer_class = OrganizationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgMember]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['name', 'email']
 
     def get_queryset(self):
         return Organization.objects.filter(members__user=self.request.user, members__is_active=True)
+
+    def get_permissions(self):
+        if self.action in ('create',):
+            # Any authenticated user can create an org
+            return [IsAuthenticated()]
+        if self.action in ('destroy',):
+            # Only org admins can delete
+            return [IsAuthenticated(), IsOrgAdmin()]
+        if self.action in ('update', 'partial_update'):
+            # Only org admins can update org settings
+            return [IsAuthenticated(), IsOrgAdmin()]
+        return super().get_permissions()
 
     @action(detail=True, methods=['get'])
     def dashboard_stats(self, request, pk=None):
@@ -48,11 +61,22 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         members = OrganizationMember.objects.filter(organization=org, is_active=True).select_related('user')
         return Response(OrganizationMemberSerializer(members, many=True).data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def invite_member(self, request, pk=None):
+        """Only org admins/owners can invite members."""
         org = self.get_object()
         email = request.data.get('email')
         role = request.data.get('role', 'viewer')
+        # Prevent non-owners from assigning the owner role
+        if role == 'owner':
+            member = OrganizationMember.objects.filter(
+                organization=org, user=request.user, role='owner'
+            ).first()
+            if not member:
+                return Response(
+                    {'error': 'Only owners can assign the owner role'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         try:
             user = User.objects.get(email=email)
             member, created = OrganizationMember.objects.get_or_create(
@@ -63,16 +87,68 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         except User.DoesNotExist:
             return Response({'error': 'User with this email not found'}, status=400)
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
+    def remove_member(self, request, pk=None):
+        """Only org admins/owners can remove members."""
+        org = self.get_object()
+        user_id = request.data.get('user_id')
+        try:
+            member = OrganizationMember.objects.get(organization=org, user_id=user_id)
+            # Prevent removing the last owner
+            if member.role == 'owner':
+                owner_count = OrganizationMember.objects.filter(
+                    organization=org, role='owner', is_active=True
+                ).count()
+                if owner_count <= 1:
+                    return Response(
+                        {'error': 'Cannot remove the last owner'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            member.is_active = False
+            member.save()
+            return Response({'status': 'removed'})
+        except OrganizationMember.DoesNotExist:
+            return Response({'error': 'Member not found'}, status=404)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
+    def change_member_role(self, request, pk=None):
+        """Only org admins/owners can change member roles."""
+        org = self.get_object()
+        user_id = request.data.get('user_id')
+        new_role = request.data.get('role')
+        valid_roles = ['owner', 'admin', 'editor', 'viewer']
+        if new_role not in valid_roles:
+            return Response({'error': f'Valid roles: {valid_roles}'}, status=400)
+        # Only owners can assign owner role
+        if new_role == 'owner':
+            is_owner = OrganizationMember.objects.filter(
+                organization=org, user=request.user, role='owner'
+            ).exists()
+            if not is_owner:
+                return Response({'error': 'Only owners can assign the owner role'}, status=403)
+        try:
+            member = OrganizationMember.objects.get(organization=org, user_id=user_id, is_active=True)
+            member.role = new_role
+            member.save()
+            return Response({'status': 'role updated', 'new_role': new_role})
+        except OrganizationMember.DoesNotExist:
+            return Response({'error': 'Member not found'}, status=404)
+
 
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgMember]
 
     def get_queryset(self):
         return User.objects.filter(
             org_memberships__organization__members__user=self.request.user,
             org_memberships__is_active=True
         ).distinct()
+
+    def get_permissions(self):
+        if self.action in ('create', 'destroy'):
+            return [IsAuthenticated(), IsOrgAdmin()]
+        return super().get_permissions()
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -81,6 +157,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'put', 'patch'])
     def me(self, request):
+        """Users can always view/update their own profile."""
         if request.method == 'GET':
             return Response(UserSerializer(request.user).data)
         serializer = UserSerializer(request.user, data=request.data, partial=True)
@@ -93,7 +170,10 @@ class UserViewSet(viewsets.ModelViewSet):
         user = request.user
         if not user.check_password(request.data.get('old_password', '')):
             return Response({'error': 'Wrong password'}, status=400)
-        user.set_password(request.data.get('new_password'))
+        new_password = request.data.get('new_password')
+        if not new_password or len(new_password) < 8:
+            return Response({'error': 'Password must be at least 8 characters'}, status=400)
+        user.set_password(new_password)
         user.save()
         return Response({'status': 'password changed'})
 

@@ -9,11 +9,13 @@ from django.db.models import Count, Sum, Q
 from .models import Project, Milestone, Task, TaskComment, TaskAttachment, Sprint
 from .serializers import (ProjectSerializer, MilestoneSerializer, TaskSerializer,
                            TaskCommentSerializer, SprintSerializer, TaskAttachmentSerializer)
+from apps.core.permissions import IsOrgEditorOrReadOnly, IsOrgAdmin
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
+    """Projects - editors can manage, viewers read-only, delete admin-only."""
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'priority', 'is_archived']
     search_fields = ['name', 'description']
@@ -55,7 +57,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'team_count': project.team_members.count(),
         })
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgEditorOrReadOnly])
     def add_member(self, request, pk=None):
         project = self.get_object()
         from apps.core.models import User
@@ -69,8 +71,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 
 class SprintViewSet(viewsets.ModelViewSet):
+    """Sprints - editors can manage, viewers read-only."""
     serializer_class = SprintSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['project', 'status']
 
@@ -113,8 +116,9 @@ class SprintViewSet(viewsets.ModelViewSet):
 
 
 class MilestoneViewSet(viewsets.ModelViewSet):
+    """Milestones - editors can manage, viewers read-only."""
     serializer_class = MilestoneSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['project', 'status']
 
@@ -125,8 +129,9 @@ class MilestoneViewSet(viewsets.ModelViewSet):
 
 
 class TaskViewSet(viewsets.ModelViewSet):
+    """Tasks - editors can manage, viewers read-only."""
     serializer_class = TaskSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['project', 'status', 'priority', 'assignee', 'sprint', 'milestone']
     search_fields = ['title', 'description']

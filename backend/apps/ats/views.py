@@ -9,11 +9,13 @@ from django.db.models import Count, Q
 from .models import JobPosting, Applicant, Interview, OfferLetter, InterviewScorecard
 from .serializers import (JobPostingSerializer, ApplicantSerializer,
                            InterviewSerializer, OfferLetterSerializer, InterviewScorecardSerializer)
+from apps.core.permissions import IsOrgEditorOrReadOnly, IsOrgAdmin
 
 
 class JobPostingViewSet(viewsets.ModelViewSet):
+    """Job postings - editors can manage, viewers read-only."""
     serializer_class = JobPostingSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'employment_type', 'department']
     search_fields = ['title', 'description', 'location']
@@ -61,8 +63,9 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 
 
 class ApplicantViewSet(viewsets.ModelViewSet):
+    """Applicants - editors can manage, viewers read-only."""
     serializer_class = ApplicantSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['job', 'stage', 'source']
     search_fields = ['first_name', 'last_name', 'email', 'current_company']
@@ -98,8 +101,9 @@ class ApplicantViewSet(viewsets.ModelViewSet):
 
 
 class InterviewViewSet(viewsets.ModelViewSet):
+    """Interviews - editors can manage, viewers read-only."""
     serializer_class = InterviewSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['applicant', 'status', 'interview_type']
     ordering_fields = ['scheduled_at']
@@ -127,8 +131,9 @@ class InterviewViewSet(viewsets.ModelViewSet):
 
 
 class OfferLetterViewSet(viewsets.ModelViewSet):
+    """Offer letters - admins can manage (sensitive financial data)."""
     serializer_class = OfferLetterSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status']
 
@@ -140,8 +145,9 @@ class OfferLetterViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def send(self, request, pk=None):
+        """Only admins can send offer letters."""
         offer = self.get_object()
         offer.status = 'sent'
         offer.sent_at = timezone.now()
@@ -169,8 +175,9 @@ class OfferLetterViewSet(viewsets.ModelViewSet):
 
 
 class InterviewScorecardViewSet(viewsets.ModelViewSet):
+    """Interview scorecards - editors can manage, viewers read-only."""
     serializer_class = InterviewScorecardSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
 
     def get_queryset(self):
         return InterviewScorecard.objects.filter(

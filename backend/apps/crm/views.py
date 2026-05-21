@@ -6,11 +6,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count
 from .models import Pipeline, Contact, Deal, Activity
 from .serializers import PipelineSerializer, ContactSerializer, DealSerializer, ActivitySerializer
+from apps.core.permissions import IsOrgEditorOrReadOnly, IsOrgAdmin
 
 
 class PipelineViewSet(viewsets.ModelViewSet):
+    """CRM Pipelines - admins can manage, editors/viewers read-only."""
     serializer_class = PipelineSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     def get_queryset(self):
         return Pipeline.objects.filter(organization__members__user=self.request.user).distinct()
     def perform_create(self, serializer):
@@ -20,8 +22,9 @@ class PipelineViewSet(viewsets.ModelViewSet):
 
 
 class ContactViewSet(viewsets.ModelViewSet):
+    """CRM Contacts - editors can manage, viewers read-only."""
     serializer_class = ContactSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['type', 'status']
     search_fields = ['first_name', 'last_name', 'email', 'company']
@@ -34,8 +37,9 @@ class ContactViewSet(viewsets.ModelViewSet):
 
 
 class DealViewSet(viewsets.ModelViewSet):
+    """CRM Deals - editors can manage, viewers read-only."""
     serializer_class = DealSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status', 'stage', 'pipeline']
     search_fields = ['title']
@@ -65,8 +69,9 @@ class DealViewSet(viewsets.ModelViewSet):
 
 
 class ActivityViewSet(viewsets.ModelViewSet):
+    """CRM Activities - editors can manage, viewers read-only."""
     serializer_class = ActivitySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['activity_type', 'status', 'contact', 'deal']
     def get_queryset(self):

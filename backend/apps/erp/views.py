@@ -6,11 +6,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum
 from .models import Account, Invoice, InvoiceItem, Expense, Income, Transaction
 from .serializers import AccountSerializer, InvoiceSerializer, ExpenseSerializer, IncomeSerializer, TransactionSerializer
+from apps.core.permissions import IsOrgEditorOrReadOnly, IsOrgAdmin, IsOrgMember
 
 
 class AccountViewSet(viewsets.ModelViewSet):
+    """Financial accounts - editors can manage, viewers read-only."""
     serializer_class = AccountSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     def get_queryset(self):
         return Account.objects.filter(organization__members__user=self.request.user).distinct()
     def perform_create(self, serializer):
@@ -20,8 +22,9 @@ class AccountViewSet(viewsets.ModelViewSet):
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
+    """Invoices - editors can create/update, only admins can delete."""
     serializer_class = InvoiceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status']
     search_fields = ['invoice_number']
@@ -31,7 +34,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
         serializer.save(organization=org, created_by=self.request.user)
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgEditorOrReadOnly])
     def mark_paid(self, request, pk=None):
         inv = self.get_object(); inv.status = 'paid'; inv.save()
         return Response(InvoiceSerializer(inv).data)
@@ -49,8 +52,9 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
+    """Expenses - editors can submit, admins can approve/reject/delete."""
     serializer_class = ExpenseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'category']
     def get_queryset(self):
@@ -59,19 +63,22 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
         serializer.save(organization=org, created_by=self.request.user)
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def approve(self, request, pk=None):
+        """Only admins/owners can approve expenses."""
         exp = self.get_object(); exp.status = 'approved'; exp.save()
         return Response(ExpenseSerializer(exp).data)
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def reject(self, request, pk=None):
+        """Only admins/owners can reject expenses."""
         exp = self.get_object(); exp.status = 'rejected'; exp.save()
         return Response(ExpenseSerializer(exp).data)
 
 
 class IncomeViewSet(viewsets.ModelViewSet):
+    """Income records - editors can manage, viewers read-only."""
     serializer_class = IncomeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     def get_queryset(self):
         return Income.objects.filter(organization__members__user=self.request.user).distinct()
@@ -82,8 +89,9 @@ class IncomeViewSet(viewsets.ModelViewSet):
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
+    """Transactions - editors can manage, viewers read-only."""
     serializer_class = TransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['transaction_type']
     def get_queryset(self):

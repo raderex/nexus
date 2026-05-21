@@ -1,64 +1,57 @@
-# Python
+# ==================== Python ====================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-env/
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
 venv/
 ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-media/
-staticfiles/
-.venv/
-.venv 
-.env
+# Database files
+*.db
+*.sqlite3
 
-# Environment
+# ==================== Environment ====================
 .env
 .env.local
 .env.*.local
 
-# IDE
+# ==================== IDE ====================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# ==================== OS ====================
 .DS_Store
 Thumbs.db
 
-# Node
+# ==================== Node ====================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# React
+# ==================== React ====================
 build/
 coverage/
 
-# Docker
-*.pid
+# ==================== Docker ====================
+docker-compose.override.yml
+
+# ==================== Media / Uploads ====================
+media/
+staticfiles/
+
+# ==================== Misc ====================
+*.log
+*.bak
+*.tmp

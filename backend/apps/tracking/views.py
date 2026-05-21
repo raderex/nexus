@@ -11,11 +11,13 @@ from .models import TimeLog, ActivityLog, Screenshot, ProductivityMetric, TimeLo
 from .serializers import (TimeLogSerializer, ActivityLogSerializer, ScreenshotSerializer,
                            ProductivityMetricSerializer, TimeLogApprovalSerializer, AppUsageSerializer)
 from apps.hrm.models import Employee
+from apps.core.permissions import IsOrgEditorOrReadOnly, IsOrgAdmin, IsOrgMember
 
 
 class TimeLogViewSet(viewsets.ModelViewSet):
+    """Time logs - editors can manage their own, viewers read-only."""
     serializer_class = TimeLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['employee', 'project', 'task', 'is_billable', 'is_running', 'source']
     ordering_fields = ['started_at', 'duration_seconds']
@@ -87,8 +89,9 @@ class TimeLogViewSet(viewsets.ModelViewSet):
             'is_running': TimeLog.objects.filter(employee=employee, is_running=True).exists(),
         })
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def team_report(self, request):
+        """Team report - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
         today = date.today()
@@ -115,8 +118,9 @@ class TimeLogViewSet(viewsets.ModelViewSet):
 
 
 class TimeLogApprovalViewSet(viewsets.ModelViewSet):
+    """Time log approvals - admins can approve/reject."""
     serializer_class = TimeLogApprovalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgMember]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status']
 
@@ -125,8 +129,9 @@ class TimeLogApprovalViewSet(viewsets.ModelViewSet):
             time_log__employee__organization__members__user=self.request.user
         ).select_related('time_log__employee__user', 'reviewed_by').distinct()
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def approve(self, request, pk=None):
+        """Only admins can approve time logs."""
         approval = self.get_object()
         approval.status = 'approved'
         approval.reviewed_by = request.user
@@ -135,8 +140,9 @@ class TimeLogApprovalViewSet(viewsets.ModelViewSet):
         approval.save()
         return Response(TimeLogApprovalSerializer(approval).data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def reject(self, request, pk=None):
+        """Only admins can reject time logs."""
         approval = self.get_object()
         approval.status = 'rejected'
         approval.reviewed_by = request.user
@@ -147,8 +153,9 @@ class TimeLogApprovalViewSet(viewsets.ModelViewSet):
 
 
 class ActivityLogViewSet(viewsets.ModelViewSet):
+    """Activity logs - read-only for members, admin writes."""
     serializer_class = ActivityLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgMember]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['employee', 'date']
     ordering_fields = ['date']
@@ -160,8 +167,9 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
 
 
 class ScreenshotViewSet(viewsets.ModelViewSet):
+    """Screenshots - read access for members, system-created."""
     serializer_class = ScreenshotSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgMember]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['employee']
     ordering_fields = ['captured_at']
@@ -173,8 +181,9 @@ class ScreenshotViewSet(viewsets.ModelViewSet):
 
 
 class ProductivityMetricViewSet(viewsets.ModelViewSet):
+    """Productivity metrics - read for members, admin manages."""
     serializer_class = ProductivityMetricSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgMember]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['employee', 'date']
 
@@ -183,8 +192,9 @@ class ProductivityMetricViewSet(viewsets.ModelViewSet):
             employee__organization__members__user=self.request.user
         ).distinct()
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def team_summary(self, request):
+        """Team productivity summary - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
         today = date.today()
@@ -199,8 +209,9 @@ class ProductivityMetricViewSet(viewsets.ModelViewSet):
         )
         return Response(metrics)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def leaderboard(self, request):
+        """Productivity leaderboard - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
         today = date.today()

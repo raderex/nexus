@@ -14,11 +14,13 @@ from .serializers import (DepartmentSerializer, EmployeeSerializer,
                            PayrollSerializer, AttendanceSerializer,
                            LeaveTypeSerializer, LeaveBalanceSerializer, LeaveRequestSerializer,
                            PerformanceGoalSerializer, PerformanceReviewSerializer, AssetSerializer)
+from apps.core.permissions import IsOrgAdmin, IsOrgEditorOrReadOnly, IsOrgAdminOrReadOnly
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
+    """Departments - admins can manage, others read-only."""
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgAdminOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
@@ -35,8 +37,9 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
+    """Employees - admins can CRUD, editors can update, viewers read-only."""
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['department', 'employment_type', 'is_active']
     search_fields = ['user__first_name', 'user__last_name', 'employee_code', 'job_title']
@@ -71,8 +74,9 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
 
 class PayrollViewSet(viewsets.ModelViewSet):
+    """Payroll - admin-only for CRUD, others read-only."""
     serializer_class = PayrollSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['employee', 'status']
 
@@ -107,8 +111,9 @@ class PayrollViewSet(viewsets.ModelViewSet):
 
 
 class AttendanceViewSet(viewsets.ModelViewSet):
+    """Attendance - editors can mark, viewers read-only."""
     serializer_class = AttendanceSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['employee', 'status', 'date']
     ordering_fields = ['date']
@@ -135,9 +140,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             'not_marked': total_emp - records.count(),
         })
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def bulk_mark(self, request):
-        """Bulk mark attendance for all employees"""
+        """Bulk mark attendance - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
         today = date.today()
@@ -154,8 +159,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
 
 class LeaveTypeViewSet(viewsets.ModelViewSet):
+    """Leave types - admin-only management."""
     serializer_class = LeaveTypeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgAdminOrReadOnly]
 
     def get_queryset(self):
         return LeaveType.objects.filter(
@@ -170,8 +176,9 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
 
 
 class LeaveRequestViewSet(viewsets.ModelViewSet):
+    """Leave requests - editors can submit, admins approve/reject."""
     serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['employee', 'leave_type', 'status']
     ordering_fields = ['start_date', 'created_at']
@@ -182,8 +189,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             employee__organization__members__is_active=True
         ).select_related('employee__user', 'leave_type').distinct()
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def approve(self, request, pk=None):
+        """Only admins/owners can approve leave requests."""
         leave = self.get_object()
         if leave.status != 'pending':
             return Response({'error': 'Only pending requests can be approved'}, status=400)
@@ -203,8 +211,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         balance.save()
         return Response(LeaveRequestSerializer(leave).data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def reject(self, request, pk=None):
+        """Only admins/owners can reject leave requests."""
         leave = self.get_object()
         leave.status = 'rejected'
         leave.reviewed_by = request.user
@@ -231,8 +240,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
 
 class PerformanceGoalViewSet(viewsets.ModelViewSet):
+    """Performance goals - editors can manage, viewers read-only."""
     serializer_class = PerformanceGoalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['employee', 'status', 'priority']
     search_fields = ['title']
@@ -247,8 +257,9 @@ class PerformanceGoalViewSet(viewsets.ModelViewSet):
 
 
 class PerformanceReviewViewSet(viewsets.ModelViewSet):
+    """Performance reviews - admins can manage, editors can view."""
     serializer_class = PerformanceReviewSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['employee', 'status', 'year', 'period']
 
@@ -267,8 +278,9 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
         review.save()
         return Response(PerformanceReviewSerializer(review).data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def complete(self, request, pk=None):
+        """Only admins can finalize reviews."""
         review = self.get_object()
         review.status = 'completed'
         review.completed_at = timezone.now()
@@ -277,8 +289,9 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
 
 
 class AssetViewSet(viewsets.ModelViewSet):
+    """Assets - editors can manage, viewers read-only."""
     serializer_class = AssetSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status', 'category', 'assigned_to']
     search_fields = ['name', 'asset_tag', 'serial_number']
@@ -294,7 +307,7 @@ class AssetViewSet(viewsets.ModelViewSet):
         org = Organization.objects.filter(members__user=self.request.user).first()
         serializer.save(organization=org)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgEditorOrReadOnly])
     def assign(self, request, pk=None):
         asset = self.get_object()
         employee_id = request.data.get('employee_id')
@@ -307,7 +320,7 @@ class AssetViewSet(viewsets.ModelViewSet):
         asset.save()
         return Response(AssetSerializer(asset).data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgEditorOrReadOnly])
     def unassign(self, request, pk=None):
         asset = self.get_object()
         asset.assigned_to = None
