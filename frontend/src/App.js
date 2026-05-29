@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from './store';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -26,23 +26,21 @@ export default function App() {
   }, [theme]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Protected><Layout /></Protected>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="erp/*" element={<ERP />} />
-          <Route path="crm/*" element={<CRM />} />
-          <Route path="hrm/*" element={<HRM />} />
-          <Route path="ats/*" element={<ATS />} />
-          <Route path="projects/*" element={<PM />} />
-          <Route path="tracking/*" element={<Tracking />} />
-          <Route path="social/*" element={<Social />} />
-          <Route path="settings/*" element={<Settings />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<Protected><Layout /></Protected>}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="erp/*" element={<ERP />} />
+        <Route path="crm/*" element={<CRM />} />
+        <Route path="hrm/*" element={<HRM />} />
+        <Route path="ats/*" element={<ATS />} />
+        <Route path="projects/*" element={<PM />} />
+        <Route path="tracking/*" element={<Tracking />} />
+        <Route path="social/*" element={<Social />} />
+        <Route path="settings/*" element={<Settings />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
