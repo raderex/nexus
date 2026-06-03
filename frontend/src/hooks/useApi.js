@@ -15,7 +15,6 @@ export function useApi(apiFn, deps = [], opts = {}) {
       return res.data;
     } catch (e) {
       if (mounted.current) setError(e?.response?.data?.detail || e?.message || 'Error');
-      throw e;
     } finally { if (mounted.current) setLoading(false); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
