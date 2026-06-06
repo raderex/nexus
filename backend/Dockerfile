@@ -10,6 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 COPY . .
 
-RUN mkdir -p /app/media /app/staticfiles
+RUN mkdir -p /app/media /app/staticfiles && \
+    chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
+
+ENTRYPOINT ["/app/entrypoint.sh"]

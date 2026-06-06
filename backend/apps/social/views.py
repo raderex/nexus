@@ -30,12 +30,18 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
-        serializer.save(organization=org)
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
+        serializer.save(organization=org, created_by=self.request.user)
 
     @action(detail=False, methods=['get'])
     def overview(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         accounts = SocialAccount.objects.filter(organization=org, is_connected=True)
         return Response({
             'total_accounts': accounts.count(),
@@ -72,6 +78,9 @@ class SocialPostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         serializer.save(organization=org, author=self.request.user)
 
     @action(detail=False, methods=['post'])
@@ -143,6 +152,9 @@ Return JSON with: {{"content": "...", "hashtags": [...], "platform_variants": {{
     def schedule(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         post = SocialPost.objects.create(
             organization=org,
             author=request.user,
@@ -159,6 +171,9 @@ Return JSON with: {{"content": "...", "hashtags": [...], "platform_variants": {{
     def calendar(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         month = request.query_params.get('month')
         year = request.query_params.get('year')
         qs = SocialPost.objects.filter(organization=org, scheduled_at__isnull=False)
@@ -170,6 +185,9 @@ Return JSON with: {{"content": "...", "hashtags": [...], "platform_variants": {{
     def analytics_summary(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         analytics = PostAnalytic.objects.filter(post__organization=org)
         return Response({
             'total_impressions': analytics.aggregate(s=Sum('impressions'))['s'] or 0,
@@ -199,6 +217,9 @@ class SocialMessageViewSet(viewsets.ModelViewSet):
     def unread_count(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         count = SocialMessage.objects.filter(organization=org, is_read=False).count()
         return Response({'unread': count})
 
@@ -214,6 +235,9 @@ class SocialMessageViewSet(viewsets.ModelViewSet):
     def mark_all_read(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         updated = SocialMessage.objects.filter(organization=org, is_read=False).update(is_read=True)
         return Response({'marked_read': updated})
 
@@ -265,6 +289,10 @@ class MediaFileViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['file_type']
 
+    ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                     'video/mp4', 'video/webm', 'application/pdf']
+    MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+
     def get_queryset(self):
         return MediaFile.objects.filter(
             organization__members__user=self.request.user
@@ -274,6 +302,16 @@ class MediaFileViewSet(viewsets.ModelViewSet):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
         f = self.request.FILES.get('file')
+        if f:
+            import mimetypes
+            guessed = mimetypes.guess_type(f.name)[0] or f.content_type
+            if guessed not in self.ALLOWED_TYPES and f.content_type not in self.ALLOWED_TYPES:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(f"File type '{f.content_type}' is not allowed. "
+                                      f"Allowed types: {', '.join(self.ALLOWED_TYPES)}")
+            if f.size > self.MAX_SIZE:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(f"File size exceeds {self.MAX_SIZE // (1024*1024)}MB limit.")
         serializer.save(
             organization=org, uploaded_by=self.request.user,
             filename=f.name if f else 'upload',
@@ -300,10 +338,12 @@ class HashtagViewSet(viewsets.ModelViewSet):
         platform = request.query_params.get('platform', 'instagram')
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         existing = Hashtag.objects.filter(
             organization=org, platform=platform, tag__icontains=topic
         ).order_by('-usage_count')[:10]
-        # Also suggest generic ones
         generic = ['trending', 'viral', 'content', 'socialmedia', 'marketing',
                    'business', 'entrepreneur', 'growth', 'digital', 'brand']
         suggestions = [f"#{h.tag}" for h in existing]
@@ -335,3 +375,24 @@ class PostQueueViewSet(viewsets.ModelViewSet):
         return PostQueue.objects.filter(
             post__organization__members__user=self.request.user
         ).order_by('scheduled_at').distinct()
+
+
+class WebhookViewSet(viewsets.ModelViewSet):
+    """Webhooks - editors can manage, viewers read-only."""
+    serializer_class = WebhookSerializer
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['event_type', 'status', 'social_account']
+
+    def get_queryset(self):
+        return Webhook.objects.filter(
+            organization__members__user=self.request.user
+        ).order_by('-created_at').distinct()
+
+    def perform_create(self, serializer):
+        from apps.core.models import Organization
+        org = Organization.objects.filter(members__user=self.request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
+        serializer.save(organization=org)

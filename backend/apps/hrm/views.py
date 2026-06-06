@@ -14,7 +14,7 @@ from .serializers import (DepartmentSerializer, EmployeeSerializer,
                            PayrollSerializer, AttendanceSerializer,
                            LeaveTypeSerializer, LeaveBalanceSerializer, LeaveRequestSerializer,
                            PerformanceGoalSerializer, PerformanceReviewSerializer, AssetSerializer)
-from apps.core.permissions import IsOrgAdmin, IsOrgEditorOrReadOnly, IsOrgAdminOrReadOnly
+from apps.core.permissions import IsOrgAdmin, IsOrgEditorOrReadOnly, IsOrgAdminOrReadOnly, IsOrgMember
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
@@ -33,7 +33,10 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
-        serializer.save(organization=org)
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
+        serializer.save(organization=org, created_by=self.request.user)
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -89,12 +92,18 @@ class PayrollViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
-        serializer.save(organization=org)
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
+        serializer.save(organization=org, created_by=self.request.user)
 
     @action(detail=False, methods=['get'])
     def summary(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         today = date.today()
         qs = Payroll.objects.filter(
             organization=org,
@@ -128,6 +137,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def today_summary(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         today = date.today()
         records = Attendance.objects.filter(employee__organization=org, date=today)
         total_emp = Employee.objects.filter(organization=org, is_active=True).count()
@@ -145,6 +157,9 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         """Bulk mark attendance - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         today = date.today()
         employees = Employee.objects.filter(organization=org, is_active=True)
         created = 0
@@ -172,7 +187,10 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
-        serializer.save(organization=org)
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
+        serializer.save(organization=org, created_by=self.request.user)
 
 
 class LeaveRequestViewSet(viewsets.ModelViewSet):
@@ -288,6 +306,19 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
         return Response(PerformanceReviewSerializer(review).data)
 
 
+class LeaveBalanceViewSet(viewsets.ModelViewSet):
+    """Leave balances - read access for members, admin manages."""
+    serializer_class = LeaveBalanceSerializer
+    permission_classes = [IsAuthenticated, IsOrgMember]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['employee', 'leave_type', 'year']
+
+    def get_queryset(self):
+        return LeaveBalance.objects.filter(
+            employee__organization__members__user=self.request.user
+        ).select_related('leave_type', 'employee__user').order_by('-created_at').distinct()
+
+
 class AssetViewSet(viewsets.ModelViewSet):
     """Assets - editors can manage, viewers read-only."""
     serializer_class = AssetSerializer
@@ -305,7 +336,10 @@ class AssetViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
-        serializer.save(organization=org)
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
+        serializer.save(organization=org, created_by=self.request.user)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgEditorOrReadOnly])
     def assign(self, request, pk=None):

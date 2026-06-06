@@ -30,6 +30,9 @@ class JobPostingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         serializer.save(organization=org, created_by=self.request.user)
 
     @action(detail=True, methods=['post'])
@@ -51,6 +54,9 @@ class JobPostingViewSet(viewsets.ModelViewSet):
     def pipeline_stats(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         stages = ['new', 'screening', 'interview', 'assessment', 'offer', 'hired', 'rejected']
         stats = {}
         for stage in stages:
@@ -75,7 +81,7 @@ class ApplicantViewSet(viewsets.ModelViewSet):
         return Applicant.objects.filter(
             job__organization__members__user=self.request.user,
             job__organization__members__is_active=True
-        ).select_related('job').order_by('-created_at').distinct()
+        ).select_related('job').order_by('-applied_at').distinct()
 
     @action(detail=True, methods=['post'])
     def move_stage(self, request, pk=None):

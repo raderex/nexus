@@ -94,6 +94,9 @@ class TimeLogViewSet(viewsets.ModelViewSet):
         """Team report - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         today = date.today()
         week_start = today - timedelta(days=today.weekday())
         employees = Employee.objects.filter(organization=org, is_active=True).select_related('user')
@@ -127,7 +130,7 @@ class TimeLogApprovalViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return TimeLogApproval.objects.filter(
             time_log__employee__organization__members__user=self.request.user
-        ).select_related('time_log__employee__user', 'reviewed_by').order_by('-created_at').distinct()
+        ).select_related('time_log__employee__user', 'reviewed_by').order_by('-submitted_at').distinct()
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def approve(self, request, pk=None):
@@ -197,6 +200,9 @@ class ProductivityMetricViewSet(viewsets.ModelViewSet):
         """Team productivity summary - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         today = date.today()
         metrics = ProductivityMetric.objects.filter(
             employee__organization=org, date=today
@@ -214,6 +220,9 @@ class ProductivityMetricViewSet(viewsets.ModelViewSet):
         """Productivity leaderboard - admin only."""
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         today = date.today()
         month_start = today.replace(day=1)
         metrics = (ProductivityMetric.objects
@@ -222,3 +231,16 @@ class ProductivityMetricViewSet(viewsets.ModelViewSet):
                    .annotate(avg_score=Avg('overall_score'), total_hours=Sum('hours_worked'))
                    .order_by('-avg_score')[:10])
         return Response(list(metrics))
+
+
+class AppUsageViewSet(viewsets.ModelViewSet):
+    """App usage tracking - read for members, admin manages."""
+    serializer_class = AppUsageSerializer
+    permission_classes = [IsAuthenticated, IsOrgMember]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['activity_log', 'app_name', 'is_productive', 'category']
+
+    def get_queryset(self):
+        return AppUsage.objects.filter(
+            activity_log__employee__organization__members__user=self.request.user
+        ).order_by('-created_at').distinct()

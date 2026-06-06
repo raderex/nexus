@@ -18,6 +18,9 @@ class PipelineViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         serializer.save(organization=org)
 
 
@@ -33,7 +36,7 @@ class ContactViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
-        serializer.save(organization=org, created_by=self.request.user)
+        serializer.save(organization=org)
 
 
 class DealViewSet(viewsets.ModelViewSet):
@@ -53,6 +56,9 @@ class DealViewSet(viewsets.ModelViewSet):
     def pipeline_summary(self, request):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         deals = Deal.objects.filter(organization=org)
         by_stage = {}
         for stage in ['new','qualified','proposal','negotiation','won','lost']:

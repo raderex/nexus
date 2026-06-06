@@ -6,6 +6,7 @@ class PipelineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pipeline
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -15,6 +16,7 @@ class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at', 'updated_at']
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()
@@ -31,6 +33,7 @@ class DealSerializer(serializers.ModelSerializer):
     class Meta:
         model = Deal
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at', 'updated_at']
 
     def get_contact_name(self, obj):
         return str(obj.contact) if obj.contact else None
@@ -45,6 +48,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Activity
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
 
     def get_assigned_to_name(self, obj):
         return obj.assigned_to.get_full_name() if obj.assigned_to else None

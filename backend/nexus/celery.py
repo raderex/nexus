@@ -25,4 +25,12 @@ app.conf.beat_schedule = {
         'task': 'apps.core.tasks.send_daily_summary_reports',
         'schedule': crontab(hour=8, minute=0),
     },
+    'send-leave-approval-reminders': {
+        'task': 'apps.core.tasks.send_leave_approval_reminders',
+        'schedule': crontab(hour=9, minute=0),
+    },
+    'send-invoice-overdue-reminders': {
+        'task': 'apps.core.tasks.send_invoice_overdue_reminders',
+        'schedule': crontab(hour=10, minute=0),
+    },
 }

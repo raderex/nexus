@@ -11,6 +11,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
     def get_employee_count(self, obj):
         return obj.employees.filter(is_active=True).count()
     def get_manager_name(self, obj):
@@ -34,6 +35,7 @@ class PayrollSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payroll
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
     def get_employee_name(self, obj):
         return obj.employee.user.get_full_name()
 
@@ -51,6 +53,7 @@ class LeaveTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveType
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
 
 
 class LeaveBalanceSerializer(serializers.ModelSerializer):
@@ -74,6 +77,11 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         return obj.employee.user.get_full_name()
     def get_reviewer_name(self, obj):
         return obj.reviewed_by.get_full_name() if obj.reviewed_by else None
+
+    def validate_attachment(self, value):
+        from apps.core.validators import validate_attachment
+        validate_attachment(value)
+        return value
 
 
 class PerformanceGoalSerializer(serializers.ModelSerializer):
@@ -102,5 +110,11 @@ class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at', 'updated_at']
     def get_assigned_to_name(self, obj):
         return obj.assigned_to.user.get_full_name() if obj.assigned_to else None
+
+    def validate_image(self, value):
+        from apps.core.validators import validate_image
+        validate_image(value)
+        return value

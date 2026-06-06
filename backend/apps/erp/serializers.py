@@ -6,6 +6,7 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
 
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
@@ -22,6 +23,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invoice
         fields = '__all__'
+        read_only_fields = ['organization', 'created_by', 'created_at', 'updated_at']
 
     def get_client_name(self, obj):
         return str(obj.client) if obj.client else None
@@ -36,6 +38,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = '__all__'
+        read_only_fields = ['organization', 'created_by', 'created_at']
 
     def get_created_by_name(self, obj):
         return obj.created_by.get_full_name() if obj.created_by else None
@@ -47,6 +50,7 @@ class IncomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Income
         fields = '__all__'
+        read_only_fields = ['organization', 'created_by', 'created_at']
 
     def get_client_name(self, obj):
         return str(obj.client) if obj.client else None
@@ -58,3 +62,4 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']

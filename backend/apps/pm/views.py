@@ -30,6 +30,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
+        if not org:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active organization found.")
         project = serializer.save(organization=org, manager=self.request.user)
         project.team_members.add(self.request.user)
 
@@ -125,6 +128,31 @@ class MilestoneViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Milestone.objects.filter(
             project__organization__members__user=self.request.user
+        ).order_by('-created_at').distinct()
+
+
+class TaskCommentViewSet(viewsets.ModelViewSet):
+    """Task comments."""
+    serializer_class = TaskCommentSerializer
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
+
+    def get_queryset(self):
+        return TaskComment.objects.filter(
+            task__project__organization__members__user=self.request.user
+        ).order_by('-created_at').distinct()
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+class TaskAttachmentViewSet(viewsets.ModelViewSet):
+    """Task attachments."""
+    serializer_class = TaskAttachmentSerializer
+    permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
+
+    def get_queryset(self):
+        return TaskAttachment.objects.filter(
+            task__project__organization__members__user=self.request.user
         ).order_by('-created_at').distinct()
 
 

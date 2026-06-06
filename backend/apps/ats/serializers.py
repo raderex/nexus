@@ -8,6 +8,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobPosting
         fields = '__all__'
+        read_only_fields = ['organization', 'created_by', 'created_at', 'updated_at']
 
 
 class ApplicantSerializer(serializers.ModelSerializer):
@@ -21,6 +22,11 @@ class ApplicantSerializer(serializers.ModelSerializer):
         return f"{obj.first_name} {obj.last_name}".strip()
     def get_interview_count(self, obj):
         return obj.interviews.count()
+
+    def validate_resume(self, value):
+        from apps.core.validators import validate_resume
+        validate_resume(value)
+        return value
 
 
 class InterviewSerializer(serializers.ModelSerializer):

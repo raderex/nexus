@@ -48,6 +48,10 @@ class Contact(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip()
 
+    def get_full_name(self):
+        """Return the contact's full name (first + last)."""
+        return f"{self.first_name} {self.last_name}".strip()
+
 
 class Deal(models.Model):
     STATUS = [('open','Open'),('won','Won'),('lost','Lost')]

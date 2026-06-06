@@ -46,6 +46,11 @@ class ScreenshotSerializer(serializers.ModelSerializer):
         model = Screenshot
         fields = '__all__'
 
+    def validate_image(self, value):
+        from apps.core.validators import validate_image
+        validate_image(value)
+        return value
+
 
 class ProductivityMetricSerializer(serializers.ModelSerializer):
     employee_name = serializers.SerializerMethodField()

@@ -118,7 +118,7 @@ class TaskAttachment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
     uploaded_by = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True)
-    file = models.FileField(upload_to='task_attachments/%Y/%m/')
+    file = models.FileField(upload_to='task_attachments/%Y/%m/', null=True, blank=True)
     filename = models.CharField(max_length=255)
     size_bytes = models.IntegerField(default=0)
     content_type = models.CharField(max_length=100, blank=True)

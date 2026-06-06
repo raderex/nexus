@@ -1,12 +1,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (DepartmentViewSet, EmployeeViewSet, PayrollViewSet, AttendanceViewSet,
-                    LeaveTypeViewSet, LeaveRequestViewSet, PerformanceGoalViewSet,
+                    LeaveTypeViewSet, LeaveBalanceViewSet, LeaveRequestViewSet, PerformanceGoalViewSet,
                     PerformanceReviewViewSet, AssetViewSet)
 
 router = DefaultRouter()
 router.register(r'departments', DepartmentViewSet, basename='department')
 router.register(r'employees', EmployeeViewSet, basename='employee')
+router.register(r'leave-balances', LeaveBalanceViewSet, basename='leavebalance')
 router.register(r'payrolls', PayrollViewSet, basename='payroll')
 router.register(r'attendances', AttendanceViewSet, basename='attendance')
 router.register(r'leave-types', LeaveTypeViewSet, basename='leavetype')

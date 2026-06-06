@@ -38,6 +38,11 @@ class TaskAttachmentSerializer(serializers.ModelSerializer):
         model = TaskAttachment
         fields = '__all__'
 
+    def validate_file(self, value):
+        from apps.core.validators import validate_attachment
+        validate_attachment(value)
+        return value
+
 
 class TaskSerializer(serializers.ModelSerializer):
     assignee_name = serializers.SerializerMethodField()
@@ -71,6 +76,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at', 'updated_at']
     def get_manager_name(self, obj):
         return obj.manager.get_full_name() if obj.manager else None
     def get_task_count(self, obj):

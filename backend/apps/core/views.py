@@ -1,8 +1,10 @@
+import os
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -10,6 +12,14 @@ from django.utils import timezone
 from .models import Organization, User, OrganizationMember
 from .serializers import OrganizationSerializer, UserSerializer, UserCreateSerializer, OrganizationMemberSerializer
 from .permissions import IsOrgAdmin, IsOrgMember, IsOrgEditorOrReadOnly
+
+
+class AuthTokenView(TokenObtainPairView):
+    throttle_scope = 'auth'
+
+
+class AuthTokenRefreshView(TokenRefreshView):
+    throttle_scope = 'auth'
 
 
 class OrganizationViewSet(viewsets.ModelViewSet):
@@ -180,6 +190,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
+    throttle_scope = 'auth'
 
     def post(self, request):
         serializer = UserCreateSerializer(data=request.data)
@@ -195,3 +206,33 @@ class RegisterView(APIView):
             )
             OrganizationMember.objects.create(organization=org, user=user, role='owner')
         return Response(UserSerializer(user).data, status=201)
+
+
+class HealthCheckView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db import connection
+        from django.db.utils import OperationalError
+        import redis
+        health = {
+            'status': 'healthy',
+            'database': 'unknown',
+            'redis': 'unknown',
+            'version': '1.0.0',
+        }
+        try:
+            connection.ensure_connection()
+            health['database'] = 'connected'
+        except OperationalError:
+            health['database'] = 'disconnected'
+            health['status'] = 'degraded'
+        try:
+            r = redis.from_url(os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'))
+            r.ping()
+            health['redis'] = 'connected'
+        except Exception:
+            health['redis'] = 'disconnected'
+            health['status'] = 'degraded'
+        status_code = status.HTTP_200_OK if health['status'] == 'healthy' else status.HTTP_503_SERVICE_UNAVAILABLE
+        return Response(health, status=status_code)

@@ -14,6 +14,7 @@ class SocialPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = SocialPost
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at', 'updated_at']
 
 
 class SocialMessageSerializer(serializers.ModelSerializer):
@@ -30,6 +31,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at', 'updated_at']
     def get_post_count(self, obj):
         return obj.posts.count()
 
@@ -38,18 +40,21 @@ class MediaFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = MediaFile
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
 
 
 class PostAnalyticSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostAnalytic
         fields = '__all__'
+        read_only_fields = ['created_at']
 
 
 class WebhookSerializer(serializers.ModelSerializer):
     class Meta:
         model = Webhook
         fields = '__all__'
+        read_only_fields = ['organization', 'created_at']
 
 
 class HashtagSerializer(serializers.ModelSerializer):
@@ -64,3 +69,4 @@ class PostQueueSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostQueue
         fields = '__all__'
+        read_only_fields = ['created_at']
