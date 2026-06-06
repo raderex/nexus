@@ -14,7 +14,7 @@ class PipelineViewSet(viewsets.ModelViewSet):
     serializer_class = PipelineSerializer
     permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     def get_queryset(self):
-        return Pipeline.objects.filter(organization__members__user=self.request.user).distinct()
+        return Pipeline.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
@@ -29,7 +29,7 @@ class ContactViewSet(viewsets.ModelViewSet):
     filterset_fields = ['type', 'status']
     search_fields = ['first_name', 'last_name', 'email', 'company']
     def get_queryset(self):
-        return Contact.objects.filter(organization__members__user=self.request.user).distinct()
+        return Contact.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
@@ -44,7 +44,7 @@ class DealViewSet(viewsets.ModelViewSet):
     filterset_fields = ['status', 'stage', 'pipeline']
     search_fields = ['title']
     def get_queryset(self):
-        return Deal.objects.filter(organization__members__user=self.request.user).select_related('contact', 'pipeline').distinct()
+        return Deal.objects.filter(organization__members__user=self.request.user).select_related('contact', 'pipeline').order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
@@ -75,7 +75,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['activity_type', 'status', 'contact', 'deal']
     def get_queryset(self):
-        return Activity.objects.filter(organization__members__user=self.request.user).distinct()
+        return Activity.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()

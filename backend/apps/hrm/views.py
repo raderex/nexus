@@ -28,7 +28,7 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         return Department.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -49,7 +49,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Employee.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).select_related('user', 'department').distinct()
+        ).select_related('user', 'department').order_by('-created_at').distinct()
 
     @action(detail=True, methods=['get'])
     def attendance_summary(self, request, pk=None):
@@ -84,7 +84,7 @@ class PayrollViewSet(viewsets.ModelViewSet):
         return Payroll.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).select_related('employee__user').distinct()
+        ).select_related('employee__user').order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -122,7 +122,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         return Attendance.objects.filter(
             employee__organization__members__user=self.request.user,
             employee__organization__members__is_active=True
-        ).select_related('employee__user').distinct()
+        ).select_related('employee__user').order_by('-created_at').distinct()
 
     @action(detail=False, methods=['get'])
     def today_summary(self, request):
@@ -167,7 +167,7 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
         return LeaveType.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -187,7 +187,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         return LeaveRequest.objects.filter(
             employee__organization__members__user=self.request.user,
             employee__organization__members__is_active=True
-        ).select_related('employee__user', 'leave_type').distinct()
+        ).select_related('employee__user', 'leave_type').order_by('-created_at').distinct()
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def approve(self, request, pk=None):
@@ -250,7 +250,7 @@ class PerformanceGoalViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return PerformanceGoal.objects.filter(
             employee__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -266,7 +266,7 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return PerformanceReview.objects.filter(
             employee__organization__members__user=self.request.user
-        ).select_related('employee__user', 'reviewer').distinct()
+        ).select_related('employee__user', 'reviewer').order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         serializer.save(reviewer=self.request.user)
@@ -300,7 +300,7 @@ class AssetViewSet(viewsets.ModelViewSet):
         return Asset.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization

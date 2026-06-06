@@ -25,7 +25,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Project.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).prefetch_related('team_members', 'milestones').distinct()
+        ).prefetch_related('team_members', 'milestones').order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -80,7 +80,7 @@ class SprintViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Sprint.objects.filter(
             project__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
@@ -125,7 +125,7 @@ class MilestoneViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Milestone.objects.filter(
             project__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -133,7 +133,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['project', 'status', 'priority', 'assignee', 'sprint', 'milestone']
+    filterset_fields = ['project', 'status', 'priority', 'assignee', 'milestone']
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'due_date', 'priority']
 
@@ -141,7 +141,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Task.objects.filter(
             project__organization__members__user=self.request.user,
             project__organization__members__is_active=True
-        ).select_related('project', 'assignee', 'reporter').prefetch_related('comments').distinct()
+        ).select_related('project', 'assignee', 'reporter').prefetch_related('comments').order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.user)

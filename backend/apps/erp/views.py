@@ -14,7 +14,7 @@ class AccountViewSet(viewsets.ModelViewSet):
     serializer_class = AccountSerializer
     permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     def get_queryset(self):
-        return Account.objects.filter(organization__members__user=self.request.user).distinct()
+        return Account.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
@@ -29,7 +29,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     filterset_fields = ['status']
     search_fields = ['invoice_number']
     def get_queryset(self):
-        return Invoice.objects.filter(organization__members__user=self.request.user).distinct()
+        return Invoice.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
@@ -58,7 +58,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'category']
     def get_queryset(self):
-        return Expense.objects.filter(organization__members__user=self.request.user).distinct()
+        return Expense.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
@@ -81,7 +81,7 @@ class IncomeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrgEditorOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     def get_queryset(self):
-        return Income.objects.filter(organization__members__user=self.request.user).distinct()
+        return Income.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()
@@ -95,7 +95,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['transaction_type']
     def get_queryset(self):
-        return Transaction.objects.filter(organization__members__user=self.request.user).distinct()
+        return Transaction.objects.filter(organization__members__user=self.request.user).order_by('-created_at').distinct()
     def perform_create(self, serializer):
         from apps.core.models import Organization
         org = Organization.objects.filter(members__user=self.request.user).first()

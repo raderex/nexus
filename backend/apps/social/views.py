@@ -25,7 +25,7 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
         return SocialAccount.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -67,7 +67,7 @@ class SocialPostViewSet(viewsets.ModelViewSet):
         return SocialPost.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).select_related('author').distinct()
+        ).select_related('author').order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -193,7 +193,7 @@ class SocialMessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return SocialMessage.objects.filter(
             organization__members__user=self.request.user
-        ).select_related('social_account').distinct()
+        ).select_related('social_account').order_by('-created_at').distinct()
 
     @action(detail=False, methods=['get'])
     def unread_count(self, request):
@@ -229,7 +229,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Campaign.objects.filter(
             organization__members__user=self.request.user
-        ).prefetch_related('posts').distinct()
+        ).prefetch_related('posts').order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -268,7 +268,7 @@ class MediaFileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return MediaFile.objects.filter(
             organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -321,7 +321,7 @@ class PostAnalyticViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return PostAnalytic.objects.filter(
             post__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
 
 class PostQueueViewSet(viewsets.ModelViewSet):

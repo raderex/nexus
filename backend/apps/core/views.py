@@ -19,7 +19,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'email']
 
     def get_queryset(self):
-        return Organization.objects.filter(members__user=self.request.user, members__is_active=True)
+        return Organization.objects.filter(members__user=self.request.user, members__is_active=True).order_by('-created_at')
 
     def get_permissions(self):
         if self.action in ('create',):
@@ -143,7 +143,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return User.objects.filter(
             org_memberships__organization__members__user=self.request.user,
             org_memberships__is_active=True
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     def get_permissions(self):
         if self.action in ('create', 'destroy'):

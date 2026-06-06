@@ -13,6 +13,9 @@ import PM from './pages/PM';
 import Tracking from './pages/Tracking';
 import Social from './pages/Social';
 import Settings from './pages/Settings';
+import Analytics from './pages/Analytics';
+import Calendar from './pages/Calendar';
+import Team from './pages/Team';
 
 function Protected({ children }) {
   const token = useStore(s => s.token);
@@ -38,6 +41,9 @@ export default function App() {
         <Route path="projects/*" element={<PM />} />
         <Route path="tracking/*" element={<Tracking />} />
         <Route path="social/*" element={<Social />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="calendar" element={<Calendar />} />
+        <Route path="team" element={<Team />} />
         <Route path="settings/*" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

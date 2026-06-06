@@ -25,7 +25,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
         return JobPosting.objects.filter(
             organization__members__user=self.request.user,
             organization__members__is_active=True
-        ).annotate(applicant_count=Count('applicants')).distinct()
+        ).annotate(applicant_count=Count('applicants')).order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         from apps.core.models import Organization
@@ -75,7 +75,7 @@ class ApplicantViewSet(viewsets.ModelViewSet):
         return Applicant.objects.filter(
             job__organization__members__user=self.request.user,
             job__organization__members__is_active=True
-        ).select_related('job').distinct()
+        ).select_related('job').order_by('-created_at').distinct()
 
     @action(detail=True, methods=['post'])
     def move_stage(self, request, pk=None):
@@ -111,7 +111,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Interview.objects.filter(
             applicant__job__organization__members__user=self.request.user
-        ).select_related('applicant', 'interviewer').distinct()
+        ).select_related('applicant', 'interviewer').order_by('-created_at').distinct()
 
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
@@ -140,7 +140,7 @@ class OfferLetterViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return OfferLetter.objects.filter(
             job__organization__members__user=self.request.user
-        ).select_related('applicant', 'job').distinct()
+        ).select_related('applicant', 'job').order_by('-created_at').distinct()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -182,4 +182,4 @@ class InterviewScorecardViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return InterviewScorecard.objects.filter(
             interview__applicant__job__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()

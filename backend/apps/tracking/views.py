@@ -26,7 +26,7 @@ class TimeLogViewSet(viewsets.ModelViewSet):
         return TimeLog.objects.filter(
             employee__organization__members__user=self.request.user,
             employee__organization__members__is_active=True
-        ).select_related('employee__user', 'task', 'project').distinct()
+        ).select_related('employee__user', 'task', 'project').order_by('-created_at').distinct()
 
     @action(detail=False, methods=['post'])
     def start_timer(self, request):
@@ -127,7 +127,7 @@ class TimeLogApprovalViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return TimeLogApproval.objects.filter(
             time_log__employee__organization__members__user=self.request.user
-        ).select_related('time_log__employee__user', 'reviewed_by').distinct()
+        ).select_related('time_log__employee__user', 'reviewed_by').order_by('-created_at').distinct()
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def approve(self, request, pk=None):
@@ -163,7 +163,7 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return ActivityLog.objects.filter(
             employee__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
 
 class ScreenshotViewSet(viewsets.ModelViewSet):
@@ -177,7 +177,7 @@ class ScreenshotViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Screenshot.objects.filter(
             employee__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
 
 class ProductivityMetricViewSet(viewsets.ModelViewSet):
@@ -190,7 +190,7 @@ class ProductivityMetricViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return ProductivityMetric.objects.filter(
             employee__organization__members__user=self.request.user
-        ).distinct()
+        ).order_by('-created_at').distinct()
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsOrgAdmin])
     def team_summary(self, request):
